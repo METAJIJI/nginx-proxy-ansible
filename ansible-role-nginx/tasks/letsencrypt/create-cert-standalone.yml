@@ -12,17 +12,11 @@
   with_items: "{{ certbot_create_standalone_stop_services }}"
 
 - name: "Generate new certificate if one doesn't exist."
-#  shell: "{{ certbot_create_command }}"
-  shell: |
-    mkdir -p /etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}
-    touch /etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/cert.pem
-    touch /etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/chain.pem
-    touch /etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/fullchain.pem
+  shell: "{{ certbot_create_command }}"
   when: not letsencrypt_cert.stat.exists
 
 - name: Generate dhparam, this can take a while.
-#  command: echo openssl dhparam -outform PEM -out "/etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/dhparam2048.pem" 2048
-  command: touch "/etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/dhparam2048.pem"
+  command: openssl dhparam -outform PEM -out "/etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/dhparam2048.pem" 2048
   args:
     creates: "/etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/dhparam2048.pem"
   when: cert_item.use_dhparam|default(nginx_use_dhparam)

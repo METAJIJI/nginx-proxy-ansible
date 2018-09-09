@@ -98,7 +98,7 @@ certbot_renew_options: '--quiet --no-self-upgrade'
 certbot_create_method: standalone
 certbot_admin_email: admin@domain.ltd
 
-certbot_create_command: "echo {{ certbot_script }} certonly --standalone --noninteractive --agree-tos --email {{ cert_item.letsencrypt_email | default(certbot_admin_email) }} -d {{ cert_item.server_name.split(' ') | join(',') }}"
+certbot_create_command: "{{ certbot_script }} certonly --standalone --noninteractive --agree-tos --email {{ cert_item.letsencrypt_email | default(certbot_admin_email) }} -d {{ cert_item.server_name.split(' ') | join(',') }}"
 certbot_create_standalone_stop_services:
   - nginx
   # - apache
