@@ -1,30 +1,31 @@
 ---
-- include: nginx-official-repo.yml
-  when: nginx_official_repo == True
-  tags: [packages,nginx]
-  
-- include: installation.packages.yml
-  when: nginx_installation_type == "packages"
-  tags: [packages,nginx]
+- name: Include OS-specific variables.
+  include_vars: "{{ ansible_os_family }}.yml"
 
-- include: ensure-dirs.yml
-  tags: [configuration,nginx]
+- name: Define nginx_user.
+  set_fact:
+    nginx_user: "{{ __nginx_user }}"
+  when: nginx_user is not defined
 
-- include: remove-defaults.yml
-  when: not keep_only_specified
-  tags: [configuration,nginx]
+- include_tasks: "{{ item }}"
+  with_first_found:
+    - "setup-{{ ansible_distribution }}.yml"
+    - "setup-{{ ansible_os_family }}.yml"
+    - "setup-UnsupportedOS.yml"
 
-- include: remove-extras.yml
-  when: keep_only_specified
-  tags: [configuration,nginx]
+- include_tasks: "letsencrypt/main.yml"
 
-- include: remove-unwanted.yml
-  tags: [configuration,nginx]
+- import_tasks: vhosts.yml
 
-- include: configuration.yml
-  tags: [configuration,nginx]
+- name: Copy nginx configuration in place.
+  template:
+    src: "{{ nginx_conf_template }}"
+    dest: "{{ nginx_conf_file_path }}"
+    owner: root
+    group: "{{ root_group }}"
+    mode: 0644
+  notify:
+    - reload nginx
 
-- name: Start the nginx service
-  service: name={{ nginx_service_name }} state=started enabled=yes
-  when: nginx_installation_type in nginx_installation_types_using_service and nginx_daemon_mode == "on"
-  tags: [service,nginx]
+- name: Ensure nginx is started and enabled to start at boot.
+  service: name=nginx state=started enabled=yes

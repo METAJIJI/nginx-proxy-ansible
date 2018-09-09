@@ -1,0 +1,12 @@
+FROM alpine:3.8 as builder
+
+RUN apk add --no-cache python py-pip gcc make \
+        python-dev libffi-dev openssl-dev musl-dev \
+    && pip install virtualenv \
+    && virtualenv /opt/venv \
+    && . /opt/venv/bin/activate \
+    && pip install ansible
+
+FROM alpine:3.8
+COPY --from=builder /opt/venv /opt/venv
+RUN apk add --no-cache python openssh-client sshpass rsync

@@ -1,0 +1,51 @@
+#
+# {{ ansible_managed }}
+#
+{% block server_redirect %}
+{% if item.https_redirect is defined %}
+server {
+    listen {{ item.listen | default('80') }};
+    server_name {{ item.server_name }};
+    return 301 https://{{ item.server_name.split(' ') | first }}$request_uri;
+}
+{% endif %}
+{% endblock %}
+
+server {
+{% block server_begin %}{% endblock %}
+{% block server_basic %}
+    listen {{ item.listen | default('80') }};
+{% if item.server_name is defined %}
+    server_name {{ item.server_name }};
+{% endif %}
+
+    root {{ item.root | default('/usr/share/nginx/html') }};
+    index {{ item.index | default('index.html index.htm') }};
+{% if item.error_page is defined %}
+    error_page {{ item.error_page }};
+{% endif %}
+{% if item.access_log is defined %}
+    access_log {{ item.access_log }};
+{% endif %}
+{% if item.error_log is defined %}
+    error_log {{ item.error_log }} error;
+{% endif %}
+
+{% if item.use_letsencrypt|default(nginx_use_letsencrypt) %}
+    # Letsencrypt ssl settigs
+    include _ssl_letsencrypt.conf;
+    ssl_certificate /etc/letsencrypt/live/{{ item.server_name.split(' ') | first }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ item.server_name.split(' ') | first }}/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/{{ item.server_name.split(' ') | first }}/chain.pem;
+    {% if item.use_dhparam|default(nginx_use_dhparam) %}ssl_dhparam /etc/letsencrypt/live/{{ item.server_name.split(' ') | first }}/dhparam2048.pem;{% endif %}
+{% endif %}
+
+{% if item.return is defined %}
+    return {{ item.return }};
+{% endif %}
+{% endblock %}{# /server_basic #}
+{% block server_end %}{% endblock %}
+{% if item.extra_parameters is defined %}
+    {{ item.extra_parameters|indent(4) }}
+{% endif %}
+}

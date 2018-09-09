@@ -1,0 +1,10 @@
+---
+- name: Install epel-release
+  become: yes
+  package: name=epel-release state=present
+  when: ansible_distribution == 'CentOS'
+
+- name: Ensure certbot is installed.
+  yum:
+    name: certbot
+    state: present

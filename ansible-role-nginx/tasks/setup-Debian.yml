@@ -1,0 +1,29 @@
+---
+- name: Ensure software-properties-common is installed.
+  become: yes
+  apt:
+    name: software-properties-common
+    update_cache: yes
+    state: present
+
+- name: Add PPA for Nginx.
+  apt_repository:
+    repo: "ppa:nginx/{{ nginx_ppa_version }}"
+    state: present
+    update_cache: yes
+    filename: nginx
+  register: nginx_ppa_added
+  when: nginx_ppa_use
+
+- name: Ensure nginx will reinstall if the PPA was just added.
+  apt:
+    name: nginx
+    state: absent
+  when: nginx_ppa_added.changed
+
+- name: Ensure nginx is installed.
+  apt:
+    name: "{{ nginx_package_name }}"
+    state: present
+    update_cache: yes
+    default_release: "{{ nginx_default_release }}"

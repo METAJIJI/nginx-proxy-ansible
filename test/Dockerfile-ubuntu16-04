@@ -1,0 +1,32 @@
+FROM ubuntu:16.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV container=docker LANG=C.UTF-8
+
+RUN apt-get update -qq \
+    && apt-get install -qqy --no-install-recommends locales systemd-sysv dbus \
+        openssh-server python \
+    && locale-gen en_US.UTF-8 && update-locale LANG=en_US.UTF-8 \
+    && echo "SSHD_OPTS='-o PermitRootLogin=yes -o UseDNS=no -o UsePAM=no -o PasswordAuthentication=yes -o UsePrivilegeSeparation=no -o PidFile=/dev/shm/sshd.pid'" > /etc/default/ssh
+
+# https://github.com/moby/moby/issues/2296
+RUN ln -s /lib/systemd/system/systemd-logind.service /etc/systemd/system/multi-user.target.wants/systemd-logind.service \
+    && mkdir /etc/systemd/system/sockets.target.wants \
+    && ln -s /lib/systemd/system/dbus.socket /etc/systemd/system/sockets.target.wants/dbus.socket \
+    && find /etc/systemd/system /lib/systemd/system \
+        -path '*.wants/*' \
+        -not -name 'ssh.service' \
+        -not -name '*journald*' \
+        -not -name '*systemd-tmpfiles*' \
+        -not -name '*systemd-user-sessions*' \
+        -delete \
+    && systemctl set-default multi-user.target \
+    && echo 'root:123qwe' | chpasswd
+
+VOLUME /sys/fs/cgroup
+
+# Gracefully stop systemd
+STOPSIGNAL SIGRTMIN+3
+
+# Workaround for console output error moby/moby#27202, based on moby/moby#9212
+CMD ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"]

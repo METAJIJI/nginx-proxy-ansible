@@ -1,0 +1,26 @@
+---
+- include_tasks: "{{ item }}"
+  with_first_found:
+    - "setup-{{ ansible_distribution }}.yml"
+    - "setup-{{ ansible_os_family }}.yml"
+    - setup-UnsupportedOS.yml
+
+- name: Copy letsencrypt for nginx.
+  template:
+    src: _ssl_letsencrypt.conf.j2
+    dest: "{{ ssl_letsencrypt_conf_file_path }}"
+    owner: root
+    group: "{{ root_group }}"
+    mode: 0644
+  notify:
+    - reload nginx
+
+- include_tasks: create-cert-standalone.yml
+  when: cert_item.use_letsencrypt|default(nginx_use_letsencrypt)
+  with_items: "{{ nginx_vhosts }}"
+  loop_control:
+    loop_var: cert_item
+
+- import_tasks: renew-cron.yml
+  when: certbot_renew
+

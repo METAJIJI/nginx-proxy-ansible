@@ -1,0 +1,8 @@
+---
+- name: 'Debian: Ensure certbot is installed.'
+  become: yes
+  apt:
+    name: certbot
+    state: present
+    default_release: "{{ ansible_distribution_release }}-backports"
+    update_cache: yes

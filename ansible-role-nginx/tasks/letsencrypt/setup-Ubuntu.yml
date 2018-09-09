@@ -1,0 +1,22 @@
+---
+- name: Ensure software-properties-common is installed.
+  become: yes
+  apt:
+    name: software-properties-common
+    update_cache: yes
+    state: present
+
+- name: Add PPA for Certbot.
+  become: yes
+  apt_repository:
+    repo: 'ppa:certbot/certbot'
+    state: present
+    update_cache: yes
+    filename: certbot
+  register: certbot_ppa_added
+
+- name: Ensure certbot is installed.
+  apt:
+    name: certbot
+    update_cache: yes
+    state: present

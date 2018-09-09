@@ -1,74 +1,21 @@
 ---
-nginx_official_repo: True
-nginx_user: "nginx"
-nginx_worker_processes: "auto"
-nginx_max_clients: 1024
+certbot_create_method: standalone
+certbot_admin_email: admin@domain.ltd
+nginx_remove_default_vhost: true
 
-nginx_events_params:
-  - worker_connections {{nginx_max_clients}}
-  - use epoll
-  - multi_accept on
-
-nginx_http_params:
-  - access_log /dev/null
-  - error_log /dev/null
-  - sendfile on
-  - tcp_nopush on
-  - tcp_nodelay on
-  - keepalive_timeout 65
-  - server_tokens off
-  - types_hash_max_size 2048
-  - client_max_body_size 0
-
-# Common site options
-nginx_sites_common_options: |
-    listen 80;
-    location ~* \.(txt|[trjw]ar|[gx]z|[bg]?zip2?|lzma|js|css|xml|gif|jpe?g|png|tif?f|ico|bmp|pdf|docx?|xlsx?|pptx?|rpm|deb|swf|pem|crt|xpi|bin|exe|dll|dmg|iso|img|msi|midi?|kar|mp3|3gp?p|mpe?g|mov|flv|as[xf]|wmv|avi|[rot]tf|eot|woff|svg)$ {
-        proxy_cache static_cache;
-        expires max;
-    }
-    error_page 500 502 503 504 /50x.html;
-    location = /50x.html {root /usr/share/nginx/html;}
-
-# Sites configuration
-nginx_sites:
-  000_default:
-    - "{{nginx_sites_common_options}}"
-    - server_name _
-    - root "/usr/share/nginx/html"
-    - index index.html
-  example.com:
-    - "{{nginx_sites_common_options}}"
-    - server_name example.com
-    - server_name www.example2.com
-    - location / { proxy_pass http://server1; }
-  domain.ltd:
-    - "{{nginx_sites_common_options}}"
-    - server_name domain.ltd
-    - location / { proxy_pass http://server1; }
-  domain2.ltd:
-    - "{{nginx_sites_common_options}}"
-    - server_name domain2.ltd
-    - location / { proxy_pass http://server2; }
-
-# /etc/nginx/conf.d/
-nginx_configs:
-  proxy:
-    - proxy_pass_header Server
-    - proxy_set_header Host $http_host
-    - proxy_set_header X-Real-IP $remote_addr
-    - proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for
-    - proxy_set_header X-Forwarded-Proto $scheme
-  cache:  # https://www.nginx.com/blog/nginx-caching-guide/
-    - proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=static_cache:100m inactive=120m max_size=500M
-    - proxy_cache_key "$request_method|$http_if_modified_since|$http_if_none_match|$host|$request_uri"
-    - proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504
-    - proxy_ignore_headers Cache-Control
-    - proxy_cache_revalidate on
-    - proxy_cache_methods GET
-    - proxy_cache_min_uses 1
-    - proxy_cache_valid 1d
-    - proxy_cache_lock on
-  upstream:
-    - upstream server1 { server 127.0.0.1:80; }
-    - upstream server2 { server 127.0.0.2:80; }
+nginx_vhosts:
+  - listen: 443 ssl
+    server_name: site1.domain.ltd
+    proxy_url: https://127.0.0.1
+    template: ansible-role-nginx/templates/proxy-vhost.j2
+    https_redirect: true
+    use_letsencrypt: true
+    use_dhparam: true
+    proxy_extra_parameters: |
+        proxy_ssl_verify off;
+        proxy_ssl_session_reuse on;
+  - listen: 80
+    server_name: site2.domain.ltd
+    proxy_url: http://127.0.0.2
+    template: ansible-role-nginx/templates/proxy-vhost.j2
+    https_redirect: false

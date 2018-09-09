@@ -1,0 +1,35 @@
+---
+- name: Check if certificate already exists.
+  stat:
+    path: "/etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/cert.pem"
+  register: letsencrypt_cert
+
+- name: Stop services to allow certbot to generate a cert.
+  service:
+    name: "{{ item }}"
+    state: stopped
+  when: not letsencrypt_cert.stat.exists
+  with_items: "{{ certbot_create_standalone_stop_services }}"
+
+- name: "Generate new certificate if one doesn't exist."
+#  shell: "{{ certbot_create_command }}"
+  shell: |
+    mkdir -p /etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}
+    touch /etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/cert.pem
+    touch /etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/chain.pem
+    touch /etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/fullchain.pem
+  when: not letsencrypt_cert.stat.exists
+
+- name: Generate dhparam, this can take a while.
+#  command: echo openssl dhparam -outform PEM -out "/etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/dhparam2048.pem" 2048
+  command: touch "/etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/dhparam2048.pem"
+  args:
+    creates: "/etc/letsencrypt/live/{{ cert_item.server_name.split(' ') | first }}/dhparam2048.pem"
+  when: cert_item.use_dhparam|default(nginx_use_dhparam)
+
+- name: Start services after cert has been generated.
+  service:
+    name: "{{ item }}"
+    state: started
+  when: not letsencrypt_cert.stat.exists
+  with_items: "{{ certbot_create_standalone_stop_services }}"
