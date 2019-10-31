@@ -38,6 +38,8 @@ nginx_server_names_hash_bucket_size: "64"
 
 nginx_proxy_cache_path: ""
 
+nginx_default_root: /usr/share/nginx/html
+
 nginx_extra_conf_options: ""
 # Example extra main options, used within the main nginx's context:
 #   nginx_extra_conf_options: |
@@ -98,7 +100,14 @@ certbot_renew_options: '--quiet --no-self-upgrade'
 certbot_create_method: standalone
 certbot_admin_email: admin@domain.ltd
 
-certbot_create_command: "{{ certbot_script }} certonly --standalone --noninteractive --agree-tos --email {{ cert_item.letsencrypt_email | default(certbot_admin_email) }} -d {{ cert_item.server_name.split(' ') | join(',') }}"
+certbot_webroot: "{{ nginx_default_root }}"
+certbot_create_command: |-
+  {{ certbot_script }} certonly
+  --noninteractive --agree-tos
+  --webroot -w {{ certbot_webroot }}
+  --email {{ cert_item.letsencrypt_email | default(certbot_admin_email) }}
+  -d {{ cert_item.server_name.split(' ') | join(',') }}
+
 certbot_create_standalone_stop_services:
   - nginx
   # - apache
